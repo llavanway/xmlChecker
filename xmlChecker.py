@@ -4,15 +4,16 @@ from tkinter import ttk
 root = Tk()
 root.title('XmlChecker')
 
+
 mainFrame = ttk.Frame(root, padding="3 3 12 12")
 mainFrame.grid(column=0, row=0, sticky=(N, W, E, S))
 mainFrame.columnconfigure(0, weight=1)
 mainFrame.rowconfigure(0, weight=1)
 
-xmlFrame = ttk.LabelFrame(mainFrame, text='Enter xml')
+xmlFrame = ttk.LabelFrame(mainFrame, text='Enter xml (Ctrl-/ to select all)')
 xmlFrame.grid(column=0,row=0)
 
-xmlField = Text(master=xmlFrame, width=35, height=11)
+xmlField = Text(master=xmlFrame,width=280,height=44,font=('Times',2))
 xmlField.pack()
 
 streetNumberFrame = ttk.LabelFrame(mainFrame, text='Enter street number from app')
@@ -48,13 +49,9 @@ fraudPass = 0
 
 ssnTest1 = 0
 ssnTest2 = 0
+ssnTest3 = 0
 
 ssnPass = 0
-
-note1 = 0
-note2 = 0
-note3 = 0
-note4 = 0
 
 socureScore = 0
 
@@ -62,15 +59,17 @@ socureScore = 0
 def checkXml ():
     """ Perform credit checks in preparation for generateNote. """
     
-    global streetNumberPass,zipCodePass,addressPass,fraudPass,ssnPass
+    global streetNumberPass,zipCodePass,addressPass,fraudPass,ssnPass,ssnTest3
     
     resultsField.delete('1.0', END)
     
     xml = xmlField.get('1.0', END).lower() # search terms must be lowercase
     streetNumberApp = streetNumberField.get()
     zipCodeApp = zipCodeField.get()
-    
+        
     indicative = xml.find("<indicative>")
+    if indicative == -1:
+        resultsField.insert(END,'<indicative> NOT FOUND, ABORT CHECKS!\n\n')
     current = xml.find('<status>current</status>',indicative)
     number = xml.find('<number>',current)
     numberEnd = xml.find('</number>',number)
@@ -90,7 +89,7 @@ def checkXml ():
     else:
         zipCodePass = False
             
-    if streetNumberPass == True and zipCodePass == True:
+    if streetNumberPass is True and zipCodePass is True:
         addressPass = True
     else:
         addressPass = False
@@ -99,7 +98,7 @@ def checkXml ():
     fraudTest1 = xml.count('fraud')
     fraudTest2 = xml.count('fraud related alert')
 
-    if fraudTest1 == 2 and fraudTest2 == 0:
+    if fraudTest1 is 2 and fraudTest2 is 0:
         fraudPass = True
     else:
         fraudPass = False
@@ -107,8 +106,9 @@ def checkXml ():
 
     ssnTest1 = xml.count('ssn')
     ssnTest2 = xml.count('ssn related alert')
+    ssnTest3 = xml.count('onedigitdiff')
     
-    if ssnTest1 == 6 and ssnTest2 == 0:
+    if ssnTest1 is 6 and ssnTest2 is 0 and ssnTest3 is 0:
         ssnPass = True
     else:
         ssnPass = False
@@ -128,19 +128,19 @@ def checkXml ():
     zipStr = 'No fraud alerts were found. The word fraud appears '
     
     
-    if addressPass == True:
+    if addressPass is True:
         resultsField.insert(END,addressStr)
     else:
         resultsField.insert(END,addressStrFail)
     
-    if fraudPass == True:
+    if fraudPass is True:
         resultsField.insert(END,zipStr+str(fraudTest1) + ' times. \n\n')
     else:
         resultsField.insert(END,
         'Fraud alert found. The word fraud appears ' + 
         str(fraudTest1) + ' times. \n\n')
         
-    if ssnPass == True:
+    if ssnPass is True:
         resultsField.insert(END,
         'No SSN alerts were found. The word SSN appears ' +
         str(ssnTest1) + ' times.\n\n')
@@ -155,22 +155,26 @@ def checkXml ():
 
 
 def generateNote ():
-    """ Generates an appropriate ACL note based on check results. """
+    """ Generates an appropriate note based on check results. """  
+        
+    root.clipboard_clear()
     
-    noteField.delete('1.0', END)    
+    noteField.delete('1.0', END)
     
-    if fraudPass == False or ssnPass == False:   
+    noteField.insert(END,'Late 90 CLEAR. \n')
+    
+    if fraudPass is False or ssnPass is False:   
         socureScore = float(socureField.get())
     else:
         socureScore = 0
     
-    if addressPass == True:
+    if addressPass is True:
         noteField.insert(END,'Address mismatch CLEAR. \n')
     else:
         noteField.insert(END,
         'Address mismatch FOUND, proof of address required. \n')
     
-    if fraudPass == True:
+    if fraudPass is True:
         noteField.insert(END,'Fraud alert CLEAR. \n')
     elif socureScore >= .3:
         noteField.insert(END,
@@ -181,7 +185,7 @@ def generateNote ():
         'Fraud alert FOUND, Socure score is ' + 
         str(socureScore) + '. \n' )
         
-    if ssnPass == True:
+    if ssnPass is True:
         noteField.insert(END,'SSN alert CLEAR. \n ')
     elif socureScore >= .3:
         noteField.insert(END,
@@ -191,6 +195,10 @@ def generateNote ():
         noteField.insert(END,
         'SSN alert FOUND, Socure score is ' + 
         str(socureScore) + '.\n')
+        
+    if ssnTest3 != 0:
+        noteField.insert(END,
+        'oneDigitDiff on credit; Social Security card required.')
         
     root.clipboard_append(noteField.get('1.0', END))
     
@@ -217,7 +225,8 @@ socureField.pack()
 b2 = ttk.Button(mainFrame, text='Generate Note', command=generateNote)
 b2.grid(column=0,row=6)
 
-noteFrame = ttk.LabelFrame(mainFrame,text='ACL Note')
+noteFrame = ttk.LabelFrame(mainFrame,text='ACL Note \n(Manual check for late \
+90s required)')
 noteFrame.grid(column=0,row=7)
 
 noteField = Text(master=noteFrame, width=35, height=11)
@@ -236,18 +245,3 @@ b3.grid(column=1,row=2)
     
 
 root.mainloop()
-
-""" TODO:
-Format the results messages with line breaks, and add confirmations that 
-trigger when fraudTest2 or ssnTest2 fail, to improve user confidence.
-
-Add a generate note button below the results frame that triggers generateNote.
-
-Change the function names to use underscore convention.
-
-Spruce up the interface: add title screen, backgrounds, 
-and improve sizing/spacing of widgets.
-
-Package the final program into exe and dmg forms for distribution.
-
-"""
