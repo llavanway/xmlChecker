@@ -8,4 +8,4 @@ To use, input the credit report in xml form, input the current address you wish 
 
 There is also a field that takes as input a "Socure score" if any alerts are found; the produced note will differ depending on whether the Socure score is below or above .3. If no alerts are found, inputting a Socure is unneccesary and will not change the produced note.
 
-Once you've completed your inputs and clicked the Check Xml button, click the Generate Note button. The generated note will automatically be copied to your clipboard, so that you may paste it wherever it may be useful.
+Once you've completed your inputs and clicked the Check Xml button, click the Generate Note button. The generated note will automatically be copied to your clipboard, so that you may easily paste it wherever it may be useful.
